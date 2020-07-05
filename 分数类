@@ -1,0 +1,97 @@
+#include<iostream>
+
+using namespace std;
+
+//分数类
+class Fraction
+{
+protected:
+    int a;//分子
+
+//private:b不设置为私有,因为下面实数类要用
+	int b;//分母
+    int divisor(int p,int q);//求最大公约数
+public:
+	void set(int aa,int bb);
+	void show();//显示分数函数
+	Fraction add(Fraction b);//相加函数
+
+};
+
+void Fraction:: set(int aa,int bb)//设计分子、分母
+{
+	a=aa;
+	if(bb!=0)//分母有效检验
+		b=bb;
+	else 
+	{
+	a=0;
+	b=1;
+	}
+}
+void Fraction::show()
+{
+	cout<<a<<"/"<<b;
+}
+
+Fraction Fraction::add(Fraction u)
+{
+	int tmp;
+    Fraction v;//对象
+
+	v.a=a*u.b+b*u.a;//分子
+	v.b=b*u.b;//分子
+	tmp=divisor(v.a,v.b);//计算分子、分母的公约数
+	v.a=v.a/tmp;//约去公约数
+	v.b=v.b/tmp;//同上
+	return v; 
+}
+
+int Fraction::divisor(int p,int q)
+{
+	int r;
+	if(p<q)
+	{
+		int tmp;
+		tmp=p;
+		p=q;
+		q=tmp;
+	}
+	r=p%q;
+	while(r!=0)
+	{
+		p=q;
+		q=r;
+		r=p%q;
+	}
+	return q;
+
+}
+
+//实数类
+class Real:public Fraction
+{
+	public:
+		void show_real()
+		{
+			cout<<a<<'/'<<b<<'='<<a/(double)b<<endl;
+		}
+	};
+
+int main()
+{
+	Real f1,f2,f3;//三个对象
+
+	int a,b,c,d;//两个分数的分子分母
+    cout<<"\n请分别输入两个分数的分子和分母为0时退出\n";
+	cin>>a>>b;
+	cin>>c>>d;
+	f1.set (a,b);
+    f2.set (c,d);
+
+	f1.show_real();
+	f2.show_real();
+
+	return 0;
+
+}
