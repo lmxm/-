@@ -1,0 +1,309 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <curses.h>
+//#include <Windows.h>//win的头文件
+#include <time.h>//时间的头文件，不过删了不会影响贪吃蛇
+//#include <conio.h>//控制台输入输出头文件
+#include<unistd.h>
+#include<pthread.h>
+
+//char bool;//布尔模型
+#define false 0
+#define true  1
+ 
+
+
+//将光标移动到控制台的(x,y)坐标点处
+/*void gotoxy(int x, int y)
+{
+	COORD coord;
+	coord.X = x;
+	coord.Y = y;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}*/
+ 
+
+
+#define SNAKESIZE 150//蛇的身体最大节数
+#define MAPWIDTH 78//宽度
+#define MAPHEIGHT 24//高度
+
+
+//食物的坐标
+struct {
+	int x;
+	int y;
+}food;
+ 
+
+//蛇的相关属性
+struct {
+	int speed;//蛇移动的速度
+	int len;//蛇的长度
+	int x[SNAKESIZE];//组成蛇身的每一个小方块中x的坐标
+	int y[SNAKESIZE];//组成蛇身的每一个小方块中y的坐标
+ 
+}snake;
+
+
+
+void drawMap();//绘制游戏边框
+
+
+void createFood();//随机生成食物
+
+
+void keyDown();//按键操作
+
+void snakemove();    //控制蛇前进方向
+
+//蛇的状态
+int snakeStatus();//从控制台移动光标
+
+//void gotoxy(int x, int y);
+
+
+int key = 72;//表示蛇移动的方向，72为按下“↑”所代表的数字
+ 
+
+
+
+int changeFlag = 0;//用来判断蛇是否吃掉了食物
+ 
+int sorce = 0;//记录玩家的得分
+
+int i,j;
+
+void drawMap()
+{
+
+
+	//打印上下边框
+	for (i = 0; i <= MAPWIDTH; i += 2)//i+=2是因为横向占用的是两个位置
+	{
+		//打印上边框
+		move(0,i);
+		printf("■");
+
+		//打印下边框
+		move(MAPHEIGHT,i);
+		printf("■");
+	}
+ 
+	//打印左右边框
+	for (i = 1; i < MAPHEIGHT; i++)
+	{
+		//打印右边框
+		move( i,0);
+		printf("■");
+
+		//打印左边框
+		move(i,MAPWIDTH);
+		printf("■");
+	}
+     
+	//简陋表格
+	for (i = 1; i <MAPWIDTH ; i+= 2)
+	{
+     for (j = 1; j <MAPHEIGHT ; j+= 2)
+	 {
+		 move(j,i);
+	    printf("_|"); 
+	}
+	
+}
+
+
+	//随机生成食物
+	while (1)
+	{
+		srand((unsigned int)time(NULL));
+		food.x = rand() % (MAPWIDTH - 4) + 2;
+		food.y = rand() % (MAPHEIGHT - 2) + 1;
+		//生成的食物横坐标的奇偶必须和初试时蛇头所在坐标的奇偶一致，因为一个字符占两个字节位置，若不一致
+		//会导致吃食物的时候只吃到一半
+		if (food.x % 2 == 0)
+			break;
+	}
+	//将光标移到食物的坐标处打印食物
+	move( food.y,food.x);
+	printf("@");
+ 
+	//初始化蛇的属性
+	snake.len = 3;
+	snake.speed = 200;
+ 
+	//在屏幕中间生成蛇头
+	snake.x[0] = MAPWIDTH / 2 + 1;//x坐标为偶数
+	snake.y[0] = MAPHEIGHT / 2;
+	
+	//打印蛇头
+	move(snake.y[0],snake.x[0]);
+	printf("<");
+ 
+	//生成初试的蛇身
+	for (i = 1; i < snake.len; i++)
+	{
+		//蛇身的打印，纵坐标不变，横坐标为上一节蛇身的坐标值+2
+		snake.x[i] = snake.x[i - 1] + 2;
+		snake.y[i] = snake.y[i - 1];
+		move( snake.y[i],snake.x[i]);
+		printf("<");
+	}
+	//打印完蛇身后将光标移到屏幕最上方，避免光标在蛇身处一直闪烁
+	move( 0,MAPWIDTH - 2);
+	return;
+}
+
+void keyDown()
+{
+	int pre_key = key;//记录前一个按键的方向
+
+ 
+	/*
+	*蛇移动时候先擦去蛇尾的一节
+	*changeFlag为0表明此时没有吃到食物，因此每走一步就要擦除掉蛇尾，以此营造一个移动的效果
+	*为1表明吃到了食物，就不需要擦除蛇尾，以此营造一个蛇身增长的效果
+	*/
+	if (changeFlag == 0)
+	{
+		move(snake.y[snake.len - 1],snake.x[snake.len - 1] );
+		printf("  ");//在蛇尾处输出空格即擦去蛇尾
+	}
+ 
+
+	//将蛇的每一节依次向前移动一节（蛇头除外）
+	for (i = snake.len - 1; i > 0; i--)
+	{
+		snake.x[i] = snake.x[i - 1];
+		snake.y[i] = snake.y[i - 1];
+	}
+ status=R;       //初始蛇向右移动
+    while(1)
+    {    	
+int input;
+		input=getch();//接收键盘值 
+
+	if((input==KEY_UP)&& status!=D)            //GetAsyncKeyState函数用来判断函数调用时指定虚拟键的状态
+        {
+            status=U;           //如果蛇不是向下前进的时候，按上键，执行向上前进操作
+        }
+        else if((input==KEY_DOWN) && status!=U)     //如果蛇不是向上前进的时候，按下键，执行向下前进操作
+        {
+            status=D;
+        }
+        else if((input==KEY_LEFT)&& status!=R)      //如果蛇不是向右前进的时候，按左键，执行向左前进
+        {
+            status=L;
+        }
+        else if((input==KEY_RIGHT)&& status!=L)     //如果蛇不是向左前进的时候，按右键，执行向右前进
+        {
+            status=R;
+        }
+
+ 
+	//判断蛇头应该往哪个方向移动
+	switch (key)
+	{
+	case 75:
+		snake.x[0] -= 2;//往左
+		break;
+	case 77:
+		snake.x[0] += 2;//往右
+		break;
+	case 72:
+		snake.y[0]--;//往上
+		break;
+	case 80:
+		snake.y[0]++;//往下
+		break;
+	}
+	//打印出蛇头
+	move(snake.y[0],snake.x[0]);
+	printf("<");
+	move(MAPWIDTH - 2, 0);
+	//由于目前没有吃到食物，changFlag值为0
+	changeFlag = 0;
+	return;
+}
+
+void createFood()
+{ 
+	if (snake.x[0] == food.x && snake.y[0] == food.y)//蛇头碰到食物
+	{
+		
+		while (1) //吃到食物后再生成食物
+		{
+			int flag = 1;
+			srand((unsigned int)time(NULL));
+			food.x = rand() % (MAPWIDTH - 4) + 2;
+			food.y = rand() % (MAPHEIGHT - 2) + 1;
+ 
+			
+			for (i = 0; i < snake.len; i++)//随机生成的食物不能在蛇的身体上
+			{
+				if (snake.x[i] == food.x && snake.y[i] == food.y)
+				{
+					flag = 0;
+					break;
+				}
+			}
+		
+			if (flag && food.x % 2 == 0)	//随机生成的食物不能横坐标为奇数，也不能在蛇身，否则重新生成
+				break;
+		}
+ 
+		//绘制食物
+		move( food.y,food.x);
+		printf("@");
+ 
+		snake.len++;//吃到食物，蛇身长度加1
+		sorce += 10;//每个食物得10分
+		snake.speed -= 3;//随着吃的食物越来越多，速度会越来越快
+		changeFlag = 1;//很重要，造成蛇身体增长的效果
+	}
+	return;
+}
+
+int snakeStatus()
+{
+	
+	if (snake.y[0] == 0 || snake.y[0] == MAPHEIGHT)//蛇头碰到上下边界，游戏结束
+		return false;
+
+	if (snake.x[0] == 0 || snake.x[0] == MAPWIDTH)	//蛇头碰到左右边界，游戏结束
+		return false;
+	
+	for (i = 1; i < snake.len; i++)//蛇头碰到蛇身，游戏结束
+	{
+		if (snake.x[i] == snake.x[0] && snake.y[i] == snake.y[0])
+			return false;
+	}
+	return true;
+}
+
+int main()
+{    
+	//设置窗口
+    //system("color f4");  //设置窗口的颜色
+    drawMap();
+	while (1)
+	{
+		keyDown();
+		if (!snakeStatus())
+			break;
+		createFood();
+		//Sleep(snake.speed);
+	}
+//大概中间位置标注结果
+    move( MAPHEIGHT / 2 - 1,MAPWIDTH / 2);
+	
+	printf("作者：赖丽敏");	
+
+    move(MAPHEIGHT / 2,MAPWIDTH / 2);
+	printf("Game Over!\n");
+	move(MAPHEIGHT / 2 + 1,MAPWIDTH / 2);
+	printf("本次游戏得分为：%d\n", sorce);
+	//Sleep(5000);
+	return 0;
+}
